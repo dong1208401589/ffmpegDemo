@@ -114,3 +114,62 @@ Java_com_chenwd_ffmpegdemo_MainActivity_open__Ljava_lang_String_2Ljava_lang_Stri
     env->ReleaseStringUTFChars(inputPath_, inputPath);
     env->ReleaseStringUTFChars(outputPath_, outputPath);
 }
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_chenwd_ffmpegdemo_VideoView_reader(JNIEnv *env, jobject instance, jstring input_,
+                                            jobject surface) {
+    const char *input = env->GetStringUTFChars(input_, 0);
+    /*Initialize libavformat and register all the muxers, demuxers and
+       protocols. If you do not call this function, then you can select
+       exactly which formats you want to support.*/
+    av_register_all();
+
+    AVFormatContext *pFormatContext=avformat_alloc_context();
+    //打开文件
+    if (avformat_open_input(&pFormatContext,input,NULL,NULL)!=0){
+        LOGE("打开文件失败。")
+        return;
+    }
+
+    //获取视频信息失败
+    if (avformat_find_stream_info(pFormatContext,NULL)<0){
+        LOGE("获取信息失败");
+        return;
+    }
+
+    //拿到视频模块的索引
+    int video_stream_idx=-1;
+    for (int i = 0; i < pFormatContext->nb_streams; ++i) {
+        if (pFormatContext->streams[i]->codec->codec_type==AVMEDIA_TYPE_VIDEO){
+            video_stream_idx=i;
+        }
+    }
+
+    //拿到解码器
+    AVCodecContext *pAVCodecContext=pFormatContext->streams[video_stream_idx]->codec;
+
+    AVCodec *pAVCodec=avcodec_find_decoder(pAVCodecContext->codec_id);
+    if(avcodec_open2(pAVCodecContext,pAVCodec,NULL)!=0){
+        //初始化AVCodecContext失败
+        LOGE("初始化AVCodecContext失败");
+    }
+
+    AVPacket *avPacket= (AVPacket *) av_malloc(sizeof(AVPacket));
+//    像素数据
+    AVFrame *avFrame=av_frame_alloc();
+
+    AVFrame *rgbFrame=av_frame_alloc();
+    //分配缓冲区内存
+    uint8_t *out_buffer= (uint8_t *) av_malloc(avpicture_get_size(AV_PIX_FMT_RGBA,
+                                                                  pAVCodecContext->width,
+                                                                  pAVCodecContext->height));
+
+//    设置avFrame 缓冲区  设置像素格式
+
+
+
+
+
+    env->ReleaseStringUTFChars(input_, input);
+}
