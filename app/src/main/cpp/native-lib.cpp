@@ -229,7 +229,7 @@ Java_com_chenwd_ffmpegdemo_VideoView_reader(JNIEnv *env, jobject instance, jstri
 //                拿到像素数据的首地址
                 uint8_t *src=rgbFrame->data[0];
 //              实际内存一行的数量
-                int srcStride= (int) rgbFrame->linesize;
+                int srcStride= rgbFrame->linesize[0];
                 for (int i = 0; i < pAVCodecContext->height; ++i) {
                     memcpy(dst+i*destStride,src+i*srcStride,srcStride);
                 }
