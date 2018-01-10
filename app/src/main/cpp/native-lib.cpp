@@ -10,6 +10,8 @@ extern "C"
 #include "libavformat/avformat.h"
 //像素处理
 #include "libswscale/swscale.h"
+#include "android/native_window_jni.h"
+#include "unistd.h"
 }
 
 
@@ -166,10 +168,81 @@ Java_com_chenwd_ffmpegdemo_VideoView_reader(JNIEnv *env, jobject instance, jstri
                                                                   pAVCodecContext->height));
 
 //    设置avFrame 缓冲区  设置像素格式
+    int re = avpicture_fill((AVPicture *) rgbFrame,
+                   out_buffer,
+                   AV_PIX_FMT_RGBA,
+                   pAVCodecContext->width,
+                   pAVCodecContext->height);
 
+    LOGE("申请内存%d",re);
 
+    SwsContext *swsContext=sws_getContext(pAVCodecContext->width,
+                                          pAVCodecContext->height,
+                                          pAVCodecContext->pix_fmt,
+                                          pAVCodecContext->width,
+                                          pAVCodecContext->height,
+                                          AV_PIX_FMT_RGBA,
+                                          SWS_BICUBIC,
+                                          NULL,
+                                          NULL,
+                                          NULL);
 
+    ANativeWindow *aNativeWindow=ANativeWindow_fromSurface(env,surface);
 
+    //视频缓冲区
+    ANativeWindow_Buffer outBuffer;
 
+    int length=0;
+    int got_frame;
+    int frame_count=0;
+    while (av_read_frame(pFormatContext,avPacket)>=0){
+        if(avPacket->stream_index==video_stream_idx){
+            length=avcodec_decode_video2(pAVCodecContext,avFrame,&got_frame,avPacket);
+            LOGE("获得长度 %d " ,length);
+            //非零  正在解码
+            if (got_frame){
+                //绘制之前配置一些信息 比如宽高 格式
+                ANativeWindow_setBuffersGeometry(aNativeWindow,
+                                                 pAVCodecContext->width,
+                                                 pAVCodecContext->height,
+                                                 WINDOW_FORMAT_RGBA_8888);
+
+                //开始绘制
+
+                //锁画布
+                ANativeWindow_lock(aNativeWindow,&outBuffer,NULL);
+
+                LOGE("解码帧数%d",frame_count++);
+
+                sws_scale(swsContext,
+                          (const uint8_t *const *) avFrame->data,
+                          avFrame->linesize,
+                          0,
+                          pAVCodecContext->height,
+                          rgbFrame->data,
+                          rgbFrame->linesize
+                );
+
+                uint8_t *dst= (uint8_t *) outBuffer.bits;
+//                拿到一行有多少个字节  rgba
+                int destStride=outBuffer.stride*4;
+//                拿到像素数据的首地址
+                uint8_t *src=rgbFrame->data[0];
+//              实际内存一行的数量
+                int srcStride= (int) rgbFrame->data[0];
+                for (int i = 0; i < pAVCodecContext->height; ++i) {
+                    memcpy(dst+i*destStride,src+i*srcStride,srcStride);
+                }
+                ANativeWindow_unlockAndPost(aNativeWindow);
+                //睡16毫秒
+                usleep(16*1000);
+            }
+        }
+        av_free_packet(avPacket);
+    }
+    ANativeWindow_release(aNativeWindow);
+    av_frame_free(&avFrame);
+    avcodec_close(pAVCodecContext);
+    avformat_free_context(pFormatContext);
     env->ReleaseStringUTFChars(input_, input);
 }
