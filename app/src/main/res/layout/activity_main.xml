@@ -7,10 +7,10 @@
     >
 
 
-    <com.chenwd.ffmpegdemo.VideoView
+    <!--<com.chenwd.ffmpegdemo.VideoView
         android:id="@+id/surface"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent" />-->
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
@@ -25,6 +25,11 @@
             android:layout_height="wrap_content"
             android:text="开始"
             android:onClick="mPlay" />
+        <Button
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="停止"
+            android:onClick="stop" />
 
     </LinearLayout>
 </RelativeLayout>
