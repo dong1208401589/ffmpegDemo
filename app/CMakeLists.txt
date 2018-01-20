@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 3.4.1)
+file(GLOB my_source src/main/cpp/*.cpp src/main/cpp/*.cpp)
+set(distribution_DIR ../../../../libs)
 add_library( native-lib
              SHARED
-             src/main/cpp/FFmpegMusic.cpp
-             src/main/cpp/native-lib.cpp
+             ${my_source}
               )
 
 find_library( log-lib
