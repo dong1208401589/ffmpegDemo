@@ -1,6 +1,6 @@
 #include <jni.h>
 #include <string>
-#include "android/log.h"
+#include "Log.h"
 
 extern "C"
 {
@@ -17,9 +17,6 @@ extern "C"
 }
 
 #include "FFmpegMusic.h"
-
-#define LOGI(FORMAT, ...) __android_log_print(ANDROID_LOG_INFO,"wd",FORMAT,##__VA_ARGS__);
-#define LOGE(FORMAT, ...) __android_log_print(ANDROID_LOG_ERROR,"wd",FORMAT,##__VA_ARGS__);
 
 extern "C"
 JNIEXPORT void JNICALL
@@ -416,4 +413,35 @@ Java_com_chenwd_ffmpegdemo_MainActivity_stopAudio(JNIEnv *env, jobject instance)
         engineEngine=NULL;
     }
     realaseFFmpeg();
+}
+
+
+
+
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_chenwd_ffmpegdemo_WDPlayer_play(JNIEnv *env, jobject instance, jstring path_) {
+    const char *path = env->GetStringUTFChars(path_, 0);
+
+    // TODO
+
+    env->ReleaseStringUTFChars(path_, path);
+}
+
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_chenwd_ffmpegdemo_WDPlayer_display(JNIEnv *env, jobject instance, jobject surface) {
+
+    // TODO
+
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_chenwd_ffmpegdemo_WDPlayer_release(JNIEnv *env, jobject instance) {
+
+    // TODO
+
 }
