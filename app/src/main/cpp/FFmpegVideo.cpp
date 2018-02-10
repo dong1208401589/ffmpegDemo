@@ -29,8 +29,10 @@ int FFmpegVideo::get(AVPacket *packet) {
         } else {
 //            如果队列里面没有数据的话  一直等待阻塞
             pthread_cond_wait(&cond, &mutex);
+
         }
     }
+    pthread_mutex_unlock(&mutex);
     return 0;
 }
 
@@ -105,5 +107,5 @@ void FFmpegVideo::stop() {
 }
 
 void FFmpegVideo::setAvCodecContext(AVCodecContext *codecContext) {
-
+    this->codec=codecContext;
 }

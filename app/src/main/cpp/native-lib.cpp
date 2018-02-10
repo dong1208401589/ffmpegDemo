@@ -1,6 +1,8 @@
 #include <jni.h>
 #include <string>
 #include "Log.h"
+#include "FFmpegVideo.h"
+#include "FFmpegAudio.h"
 
 extern "C"
 {
@@ -11,6 +13,7 @@ extern "C"
 //像素处理
 #include "libswscale/swscale.h"
 #include "android/native_window_jni.h"
+#include "libswresample/swresample.h"
 #include "unistd.h"
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
@@ -417,6 +420,99 @@ Java_com_chenwd_ffmpegdemo_MainActivity_stopAudio(JNIEnv *env, jobject instance)
 
 
 
+
+
+const char *path;
+FFmpegAudio *audio;
+FFmpegVideo *video;
+pthread_t p_tid;
+int isPlay=0;
+
+/**
+ * 解码函数
+ * @return
+ */
+void *process(void *arg){
+    LOGE("开启解码线程");
+    //1.注册组件
+    av_register_all();
+    //初始化网络组件，如果只播放本地视频可以不要
+    avformat_network_init();
+    //封装格式上下文
+    AVFormatContext *pFormatCtx=avformat_alloc_context();
+    if(avformat_open_input(&pFormatCtx,path,NULL,NULL)!=0){
+        LOGE("%s","打开输入视频文件失败");
+    }
+    //获取视频信息
+    if(avformat_find_stream_info(pFormatCtx,NULL)<0){
+        LOGE("%s","获取视频信息失败");
+    }
+
+    //视频解码，需要找到对应的AVStream所在pFormatCtx->streams 的索引位置
+    int i=0;
+    for ( ; i < pFormatCtx->nb_streams; ++i) {
+        //获取视频解码器
+        AVCodecContext *pCodeCtx=pFormatCtx->streams[i]->codec;
+        AVCodec *pCodec=avcodec_find_decoder(pCodeCtx->codec_id);
+
+        AVCodecContext *codec=avcodec_alloc_context3(pCodec);
+        avcodec_copy_context(codec,pCodeCtx);
+        if (avcodec_open2(codec,pCodec,NULL)<0){
+            LOGE("%s","解码器无法打开");
+            continue;
+        }
+        //根据类型判断，是否是视频流
+        if (pFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_VIDEO){
+            //找到视频流
+            video->setAvCodecContext(codec);
+            video->index=i;
+
+        } else if(pFormatCtx->streams[i]->codec->codec_type==AVMEDIA_TYPE_AUDIO){
+            audio->setAVCodecContext(codec);
+            audio->index=i ;
+
+        }
+    }
+    //开启音频 视频 播放的死循环
+
+    video->play();
+    audio->play();
+    isPlay=1;
+    //解码packet
+
+    //编码数据
+    AVPacket *packet= (AVPacket *) av_malloc(sizeof(AVPacket));
+    //解码完整个视频  子线程
+    int ret;
+    while (isPlay){
+        //如果这个packet 流索引 等于视频流索引 添加到视频队列
+        ret=av_read_frame(pFormatCtx,packet);
+        if (ret==0){
+            if (video&& video->isPlay&&packet->stream_index==video->index){
+                video->put(packet);
+            } else if (audio&&audio->isPlay&&packet->stream_index==audio->index){
+                audio->put(packet);
+            }
+            av_packet_unref(packet);
+        } else if(ret==AVERROR_EOF) {
+            //读完了
+            //但是不一定播放完毕
+
+            while (isPlay){
+                if (video->queue.empty()&&audio->queue.empty()){
+                    break;
+                }
+                //av_usleep(10000);
+            }
+        }
+    }
+
+
+
+
+
+
+}
 
 
 extern "C"
